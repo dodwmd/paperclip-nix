@@ -78,8 +78,10 @@ in
       Group = serviceGroup;
       WorkingDirectory = agentHome;
 
-      # Initialize data directory on first run; ignore errors if already done.
-      ExecStartPre = [ "-${muninnPkg}/bin/muninn init" ];
+      # Non-interactive init on first run (--no-start: don't auto-start, we manage that;
+      # --no-token: open MCP, we deploy .mcp.json via Nix; --yes: skip prompts).
+      # The leading "-" makes systemd ignore a non-zero exit (e.g. already initialised).
+      ExecStartPre = [ "-${muninnPkg}/bin/muninn init --yes --no-token --no-start" ];
       ExecStart = "${muninnPkg}/bin/muninn start";
 
       Restart = "on-failure";
@@ -106,7 +108,10 @@ in
   # C+ copies the Nix-managed file on every activation, keeping it in sync with
   # this derivation. Manual edits to .mcp.json will be overwritten at next boot.
   systemd.tmpfiles.rules = [
-    "d ${dataDir} 0700 ${serviceUser} ${serviceGroup} -"
+    # systemd-tmpfiles does not create parent directories automatically,
+    # so both levels must be listed explicitly.
+    "d ${agentHome}/.muninn 0700 ${serviceUser} ${serviceGroup} -"
+    "d ${dataDir}           0700 ${serviceUser} ${serviceGroup} -"
     "C+ ${agentHome}/.mcp.json 0644 ${serviceUser} ${serviceGroup} - ${mcpJsonFile}"
   ];
 
