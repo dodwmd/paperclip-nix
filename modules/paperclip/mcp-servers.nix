@@ -77,15 +77,4 @@ in
     };
   };
 
-  # MCP server configuration for paperclip
-  # Place this config so paperclip knows about available MCP servers
-  environment.etc."paperclip/mcp-servers.json".text = builtins.toJSON {
-    mcpServers = {
-      context7 = {
-        command = "${context7Bin}/bin/context7-mcp";
-        args = [];
-        description = "Context7 — resolve library documentation and code examples";
-      };
-    };
-  };
 }
