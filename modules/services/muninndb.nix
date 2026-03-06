@@ -28,6 +28,11 @@ let
     # Tarball unpacks to a flat directory — binary is named "muninn"
     sourceRoot = ".";
 
+    # The binary is CGO-linked against glibc. autoPatchelfHook rewrites the
+    # ELF interpreter and RPATH to use Nix store paths so it runs on NixOS.
+    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+    buildInputs = [ pkgs.stdenv.cc.cc.lib ];  # libgcc_s / libstdc++
+
     installPhase = ''
       runHook preInstall
       mkdir -p $out/bin
