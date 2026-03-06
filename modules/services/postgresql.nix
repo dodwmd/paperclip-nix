@@ -22,12 +22,22 @@ in
         ensureDBOwnership = true;
       }
     ];
-    # Allow local connections with peer auth + password auth from localhost
+    # Map the "agent" OS user → "paperclip" DB user so agents can connect via
+    # Unix socket without a password (peer auth checks OS identity, not a secret).
+    # Usage: psql -U paperclip paperclip  (no -h flag — Unix socket only)
+    identMap = ''
+      agent-map   agent   paperclip
+    '';
+
+    # Allow local connections with peer auth + password auth from localhost.
+    # The agent-map rule must come before the catch-all "local all all peer" so
+    # that "agent" OS user connecting as "paperclip" DB user is matched first.
     authentication = ''
-      # TYPE  DATABASE  USER       ADDRESS        METHOD
-      local   all       all                       peer
-      host    all       all        127.0.0.1/32   scram-sha-256
-      host    all       all        ::1/128        scram-sha-256
+      # TYPE  DATABASE    USER        ADDRESS        METHOD
+      local   paperclip   paperclip                  peer map=agent-map
+      local   all         all                        peer
+      host    all         all         127.0.0.1/32   scram-sha-256
+      host    all         all         ::1/128        scram-sha-256
     '';
     settings = {
       password_encryption = "scram-sha-256";
