@@ -21,5 +21,6 @@
     direnv
     starship              # shell prompt
     zoxide                # smart cd
+    claude-code           # Claude Code CLI — required for agent runs
   ];
 }

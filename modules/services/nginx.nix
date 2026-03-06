@@ -21,14 +21,9 @@ in
       error_log /var/log/nginx/error.log;
     '';
 
-    # Security: don't advertise nginx version
+    # Define the rate-limiting zone referenced by locations."/api/".extraConfig below.
+    # (recommendedOptimisation covers server_tokens/client_max_body_size; nothing else needed here.)
     appendHttpConfig = ''
-      server_tokens off;
-
-      # Limit request body size (prevent large payload abuse)
-      client_max_body_size 10m;
-
-      # Rate limiting zone — 10 requests/sec per IP with burst
       limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
     '';
 

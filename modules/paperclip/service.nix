@@ -8,6 +8,8 @@ let
   serviceGroup = "users";
   paperclipDir = "/home/${serviceUser}/paperclip";
   paperclipHome = "/home/${serviceUser}/.paperclip";
+  claudeDir = "/home/${serviceUser}/.claude";
+  claudeConfig = "/home/${serviceUser}/.claude.json";
   paperclipHost = "127.0.0.1";
   paperclipPort = "3100";
   restartDelay = "10s";
@@ -27,8 +29,10 @@ in
     requires = [ "postgresql.service" "postgresql-set-password.service" ];
     wantedBy = [ "multi-user.target" ];
 
-    # PATH must include tools that paperclip spawns as child processes (agents, git, etc.)
-    path = [ pkgs.git pkgs.nodejs_22 pkgs.nodePackages.pnpm pkgs.coreutils ];
+    # Expose all system packages to child processes (agents, git, node, claude, etc.)
+    # Using systemPackages means any tool added to the system is automatically available
+    # to agents without needing to update this list.
+    path = config.environment.systemPackages;
 
     environment = {
       NODE_ENV = "production";
@@ -39,8 +43,8 @@ in
       PAPERCLIP_HOME = paperclipHome;
       PAPERCLIP_INSTANCE_ID = "default";
       PAPERCLIP_DEPLOYMENT_MODE = "local_trusted";
-      PAPERCLIP_MIGRATION_PROMPT = "never";
-      PAPERCLIP_MIGRATION_AUTO_APPLY = "true";
+      PAPERCLIP_MIGRATION_AUTO_APPLY = "true"; # apply pending migrations on startup
+      PAPERCLIP_MIGRATION_PROMPT = "never";    # safety net: don't hang on interactive prompt if AUTO_APPLY is unset
       # DATABASE_URL built at runtime from db-password secret (see ExecStartPre)
     };
 
@@ -85,10 +89,14 @@ in
       BindPaths = [
         paperclipDir
         paperclipHome
+        claudeDir     # claude session state, history, cache
+        claudeConfig  # claude main config + auth (~/.claude.json)
       ];
       ReadWritePaths = [
         paperclipDir
         paperclipHome
+        claudeDir
+        claudeConfig
       ];
 
       # Additional sandboxing for Node.js process
@@ -110,6 +118,9 @@ in
     "d ${paperclipDir} 0750 ${serviceUser} ${serviceGroup} -"
     "d ${paperclipHome} 0700 ${serviceUser} ${serviceGroup} -"
     "d ${paperclipHome}/instances/default 0700 ${serviceUser} ${serviceGroup} -"
+    "d ${paperclipHome}/instances/default/logs 0700 ${serviceUser} ${serviceGroup} -"
     "d ${paperclipHome}/pnpm 0700 ${serviceUser} ${serviceGroup} -"
+    "d ${claudeDir} 0700 ${serviceUser} ${serviceGroup} -"
+    "f ${claudeConfig} 0600 ${serviceUser} ${serviceGroup} -"
   ];
 }

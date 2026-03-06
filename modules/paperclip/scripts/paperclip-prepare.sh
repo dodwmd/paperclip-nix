@@ -30,16 +30,25 @@ fi
 
 if [ "$CURRENT_HASH" = "$PREV_HASH" ] && [ -d "node_modules" ]; then
   echo "Dependencies up to date, skipping install"
-  exit 0
+else
+  echo "Lock file changed (prev: ${PREV_HASH:-none}, current: ${CURRENT_HASH})"
+  echo "Running pnpm install (prod only)..."
+
+  # Production-only install, skip postinstall scripts (esbuild/embedded-postgres try to
+  # download binaries which fails in the NixOS sandbox — they are not needed at runtime).
+  pnpm install --frozen-lockfile --prod --ignore-scripts
+
+  mkdir -p "$STAMP_DIR"
+  echo "$CURRENT_HASH" > "$STAMP"
+  echo "Install complete"
 fi
 
-echo "Lock file changed (prev: ${PREV_HASH:-none}, current: ${CURRENT_HASH})"
-echo "Running pnpm install (prod only)..."
-
-# Production-only install, skip postinstall scripts (esbuild/embedded-postgres try to
-# download binaries which fails in the NixOS sandbox — they are not needed at runtime).
-pnpm install --frozen-lockfile --prod --ignore-scripts
-
-mkdir -p "$STAMP_DIR"
-echo "$CURRENT_HASH" > "$STAMP"
-echo "Install complete"
+# Always apply publishConfig so workspace packages resolve to compiled dist/ output
+# rather than TypeScript source files. Workspace package.json files use src/ exports
+# for local development but production needs dist/ exports. This is idempotent.
+if [ -f "scripts/apply-publish-config.mjs" ]; then
+  echo "Applying publishConfig exports..."
+  node scripts/apply-publish-config.mjs
+else
+  echo "WARNING: scripts/apply-publish-config.mjs not found — workspace packages may fail to resolve"
+fi

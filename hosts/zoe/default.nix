@@ -17,6 +17,7 @@
     ../../modules/services/nfs-backup.nix
     ../../modules/services/nginx.nix
     ../../modules/services/monitoring.nix
+    ../../modules/services/muninndb.nix
 
     ../../modules/paperclip/default.nix
     ../../modules/secrets.nix

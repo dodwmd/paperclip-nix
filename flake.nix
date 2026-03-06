@@ -30,6 +30,9 @@
         ];
       };
 
+      # Expose agenix binary so `nix run .#agenix` works (avoids Go build cache issues)
+      packages.${system}.agenix = agenix.packages.${system}.default;
+
       # Verify the configuration builds
       checks.${system}.default = self.nixosConfigurations.zoe.config.system.build.toplevel;
 

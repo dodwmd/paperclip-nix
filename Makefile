@@ -1,6 +1,6 @@
 HOST       ?= zoe.home.dodwell.us
 TARGET     ?= zoe.home.dodwell.us
-FLAKE      ?= .#zoe
+FLAKE      ?= path:.#zoe
 HOST_KEY_PUB := secrets/host-keys/ssh_host_ed25519_key.pub
 HOST_KEY_AGE := secrets/ssh_host_ed25519_key.age
 EXTRA_FILES  := secrets/host-keys/extra-files
@@ -120,6 +120,8 @@ sync-app:
 		--exclude .git \
 		--exclude nix \
 		../ agent@$(HOST):/home/agent/paperclip/
+	ssh -i ~/.ssh/id_agent_paperclip agent@$(HOST) \
+		'cd /home/agent/paperclip && node scripts/apply-publish-config.mjs'
 
 ## Rsync MCP config
 sync-config:
@@ -186,12 +188,12 @@ db-backup-list:
 
 ## Re-encrypt all secrets with current keys
 rekey:
-	cd secrets && nix run github:ryantm/agenix -- -r
+	cd secrets && nix run path:..#agenix -- -r
 
 ## Edit a secret (usage: make edit-secret NAME=paperclip-env)
 edit-secret:
 	@[ -n "$(NAME)" ] || (echo "Usage: make edit-secret NAME=paperclip-env" && exit 1)
-	cd secrets && nix run github:ryantm/agenix -- -e $(NAME).age
+	cd secrets && nix run path:..#agenix -- -e $(NAME).age
 
 # ─── SSH ──────────────────────────────────────────────────────
 .PHONY: ssh ssh-agent
@@ -205,15 +207,45 @@ ssh-agent:
 	ssh -i ~/.ssh/id_agent_paperclip agent@$(HOST)
 
 # ─── Utilities ────────────────────────────────────────────────
-.PHONY: check update
+.PHONY: check update update-muninndb
 
 ## Check flake evaluates without errors
 check:
 	nix flake check
 
-## Update flake inputs
-update:
+## Update flake inputs and pinned dependencies (MuninnDB, etc.)
+update: update-muninndb
 	nix flake update
+
+## Update MuninnDB binary to the latest GitHub release with Linux binaries.
+## Edits modules/services/muninndb.nix in-place; run 'make deploy-nixos' to apply.
+update-muninndb:
+	@JSON=$$(curl -sf https://api.github.com/repos/scrypster/muninndb/releases) || \
+		{ echo "ERROR: Failed to fetch GitHub releases API."; exit 1; }; \
+	TAG=$$(printf '%s' "$$JSON" \
+		| jq -r '[.[] | select(.assets | map(.name | test("linux_amd64\\.tar\\.gz")) | any)] | first | .tag_name'); \
+	URL=$$(printf '%s' "$$JSON" \
+		| jq -r '[.[] | select(.assets | map(.name | test("linux_amd64\\.tar\\.gz")) | any)] | first | [.assets[] | select(.name | test("linux_amd64\\.tar\\.gz")) | .browser_download_url] | first'); \
+	VERSION=$${TAG#v}; \
+	CURRENT=$$(grep 'version = ' modules/services/muninndb.nix | head -1 \
+		| sed 's/.*version = "\(.*\)";/\1/'); \
+	if [ "$$VERSION" = "$$CURRENT" ]; then \
+		echo "MuninnDB already at $$VERSION — nothing to do."; \
+		exit 0; \
+	fi; \
+	echo "Updating MuninnDB: $$CURRENT → $$VERSION"; \
+	echo "Fetching Nix hash for $$URL ..."; \
+	B32=$$(nix-prefetch-url --type sha256 "$$URL" 2>/dev/null) || \
+		{ echo "ERROR: nix-prefetch-url failed. Is the URL reachable?"; exit 1; }; \
+	SRI=$$(nix hash convert --hash-algo sha256 --to sri "$$B32"); \
+	sed -i "s|version = \"[^\"]*\";|version = \"$$VERSION\";|" modules/services/muninndb.nix; \
+	sed -i "s|hash = \"sha256-[^\"]*\";|hash = \"$$SRI\";|" modules/services/muninndb.nix; \
+	echo ""; \
+	echo "Updated modules/services/muninndb.nix"; \
+	echo "  version : $$VERSION"; \
+	echo "  hash    : $$SRI"; \
+	echo ""; \
+	echo "Run 'make deploy-nixos' to apply."
 
 # ─── Help ─────────────────────────────────────────────────────
 .PHONY: help
