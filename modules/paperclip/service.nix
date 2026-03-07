@@ -119,6 +119,7 @@ in
     "d ${paperclipHome} 0700 ${serviceUser} ${serviceGroup} -"
     "d ${paperclipHome}/instances/default 0700 ${serviceUser} ${serviceGroup} -"
     "d ${paperclipHome}/instances/default/logs 0700 ${serviceUser} ${serviceGroup} -"
+    "d ${paperclipHome}/instances/default/secrets 0700 ${serviceUser} ${serviceGroup} -"
     "d ${paperclipHome}/pnpm 0700 ${serviceUser} ${serviceGroup} -"
     "d ${claudeDir} 0700 ${serviceUser} ${serviceGroup} -"
     "f ${claudeConfig} 0600 ${serviceUser} ${serviceGroup} -"

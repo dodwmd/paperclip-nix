@@ -3,6 +3,7 @@
 {
   environment.systemPackages = with pkgs; [
     nodejs_22
+    bun
     nodePackages.pnpm
     nodePackages.npm
     nodePackages.yarn

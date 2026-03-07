@@ -32,5 +32,14 @@
       group = "users";
       mode = "0400";
     };
+
+    # Master key for Paperclip secrets encryption — deployed directly to its expected path
+    paperclip-master-key = {
+      file = ../secrets/paperclip-master-key.age;
+      path = "/home/agent/.paperclip/instances/default/secrets/master.key";
+      owner = "agent";
+      group = "users";
+      mode = "0400";
+    };
   };
 }

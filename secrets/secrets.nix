@@ -24,4 +24,7 @@ in
   "db-password.age".publicKeys = allKeys;
   "paperclip-env.age".publicKeys = allKeys;
   "github-pat.age".publicKeys = allKeys;
+
+  # Paperclip master key for secrets encryption (deployed to ~/.paperclip/instances/default/secrets/master.key)
+  "paperclip-master-key.age".publicKeys = allKeys;
 }
