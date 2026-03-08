@@ -1,10 +1,22 @@
-{ ... }:
+{ config, ... }:
 
 let
   serverName = "zoe.home.dodwell.us";
   upstreamUrl = "http://127.0.0.1:3100";
 in
 {
+  # ACME certificate via Cloudflare DNS challenge (same pattern as nexus homelab hosts)
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "michael@dodwell.us";
+  };
+
+  security.acme.certs.${serverName} = {
+    dnsProvider = "cloudflare";
+    credentialsFile = config.age.secrets.cloudflare-credentials.path;
+    webroot = null;
+  };
+
   services.nginx = {
     enable = true;
 
@@ -29,6 +41,8 @@ in
 
     virtualHosts.${serverName} = {
       default = true;
+      forceSSL = true;
+      enableACME = true;
 
       # Security headers
       extraConfig = ''
@@ -57,8 +71,8 @@ in
     };
   };
 
-  # Open port 80 for HTTP
-  networking.firewall.allowedTCPPorts = [ 80 ];
+  # Open ports for HTTP (redirect) and HTTPS
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
 
   # Ensure nginx log directory and files exist with correct ownership.
   # fail2ban nginx-limit-req jail requires the log files to exist at startup.

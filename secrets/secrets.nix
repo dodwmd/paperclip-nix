@@ -27,4 +27,7 @@ in
 
   # Paperclip master key for secrets encryption (deployed to ~/.paperclip/instances/default/secrets/master.key)
   "paperclip-master-key.age".publicKeys = allKeys;
+
+  # Cloudflare API token for ACME DNS challenge
+  "cloudflare-credentials.age".publicKeys = allKeys;
 }

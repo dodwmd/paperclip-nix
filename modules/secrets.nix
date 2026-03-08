@@ -41,5 +41,13 @@
       group = "users";
       mode = "0400";
     };
+
+    # Cloudflare API token for ACME DNS challenge (nginx TLS)
+    cloudflare-credentials = {
+      file = ../secrets/cloudflare-credentials.age;
+      owner = "acme";
+      group = "acme";
+      mode = "0400";
+    };
   };
 }
