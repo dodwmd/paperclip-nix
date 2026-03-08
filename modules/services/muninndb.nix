@@ -73,7 +73,10 @@ in
     };
 
     serviceConfig = hardening.base // {
-      Type = "simple";
+      # muninn start daemonizes (forks to a background process and exits).
+      # Type=forking tells systemd to track the child via the PID file.
+      Type = "forking";
+      PIDFile = "${dataDir}/muninn.pid";
       User = serviceUser;
       Group = serviceGroup;
       WorkingDirectory = agentHome;
@@ -83,6 +86,7 @@ in
       # The leading "-" makes systemd ignore a non-zero exit (e.g. already initialised).
       ExecStartPre = [ "-${muninnPkg}/bin/muninn init --yes --no-token --no-start" ];
       ExecStart = "${muninnPkg}/bin/muninn start";
+      ExecStop = "${muninnPkg}/bin/muninn stop";
 
       Restart = "on-failure";
       RestartSec = restartDelay;
