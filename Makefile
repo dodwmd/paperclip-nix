@@ -113,7 +113,7 @@ deploy-app:
 
 ## Build app locally then rsync to NUC
 sync-app:
-	cd .. && pnpm build
+	cd .. && pnpm install && pnpm build
 	rsync -avz --delete \
 		-e "ssh -i ~/.ssh/id_agent_paperclip" \
 		--exclude node_modules \
