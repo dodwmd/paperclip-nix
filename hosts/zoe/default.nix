@@ -1,6 +1,21 @@
 { ... }:
 
 {
+  # N5105 (Jasper Lake) has no AVX2 — use the bun baseline build.
+  # When nixpkgs bumps bun, update the hash:
+  #   nix store prefetch-file --hash-type sha256 \
+  #     "https://github.com/oven-sh/bun/releases/download/bun-v<VERSION>/bun-linux-x64-baseline.zip"
+  nixpkgs.overlays = [
+    (_final: prev: {
+      bun = prev.bun.overrideAttrs (_old: {
+        src = prev.fetchzip {
+          url = "https://github.com/oven-sh/bun/releases/download/bun-v${prev.bun.version}/bun-linux-x64-baseline.zip";
+          hash = "sha256-ZWTs4ApH0BsATxrE1DSuqCETIrNZZxdG8xtN0NinNBw="; # bun 1.3.10
+        };
+      });
+    })
+  ];
+
   imports = [
     ./hardware-configuration.nix
     ./networking.nix

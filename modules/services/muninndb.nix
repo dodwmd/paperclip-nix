@@ -73,10 +73,12 @@ in
     };
 
     serviceConfig = hardening.base // {
-      # muninn start daemonizes (forks to a background process and exits).
-      # Type=forking tells systemd to track the child via the PID file.
-      Type = "forking";
-      PIDFile = "${dataDir}/muninn.pid";
+      # muninn start daemonizes (forks off a background process and exits).
+      # Type=forking is unreliable here — the daemon is killed by cgroup cleanup
+      # before systemd can adopt it via the PID file.
+      # Instead: start the daemon then exec sleep infinity so systemd has a
+      # stable foreground process to track. ExecStop runs muninn stop cleanly.
+      Type = "simple";
       User = serviceUser;
       Group = serviceGroup;
       WorkingDirectory = agentHome;
@@ -85,7 +87,10 @@ in
       # --no-token: open MCP, we deploy .mcp.json via Nix; --yes: skip prompts).
       # The leading "-" makes systemd ignore a non-zero exit (e.g. already initialised).
       ExecStartPre = [ "-${muninnPkg}/bin/muninn init --yes --no-token --no-start" ];
-      ExecStart = "${muninnPkg}/bin/muninn start";
+      ExecStart = pkgs.writeShellScript "muninndb-start" ''
+        ${muninnPkg}/bin/muninn start
+        exec ${pkgs.coreutils}/bin/sleep infinity
+      '';
       ExecStop = "${muninnPkg}/bin/muninn stop";
 
       Restart = "on-failure";
