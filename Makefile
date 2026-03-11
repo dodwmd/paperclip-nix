@@ -4,6 +4,8 @@ FLAKE      ?= path:.#zoe
 HOST_KEY_PUB := secrets/host-keys/ssh_host_ed25519_key.pub
 HOST_KEY_AGE := secrets/ssh_host_ed25519_key.age
 EXTRA_FILES  := secrets/host-keys/extra-files
+COMPANY_ID ?=
+AGENT_REF  ?= developer
 
 # ─── Deployment ────────────────────────────────────────────────
 .PHONY: deploy deploy-nixos deploy-boot deploy-test deploy-dry
@@ -212,6 +214,23 @@ ssh:
 ## SSH as agent user (uses dedicated agent key)
 ssh-agent:
 	ssh -i ~/.ssh/id_agent_paperclip agent@$(HOST)
+
+# ─── Agent / API ──────────────────────────────────────────────
+.PHONY: agent-creds
+
+## Print local-cli env exports for an agent (usage: make agent-creds AGENT_REF=developer COMPANY_ID=<uuid>)
+## Eval the output to load PAPERCLIP_* vars into your shell: eval $(make agent-creds ...)
+agent-creds:
+	@[ -n "$(COMPANY_ID)" ] || (echo "Usage: make agent-creds AGENT_REF=$(AGENT_REF) COMPANY_ID=<uuid>" && exit 1)
+	@ssh -i ~/.ssh/id_agent_paperclip -f -N -L 13100:localhost:3100 agent@$(HOST) 2>/dev/null; \
+	 sleep 1; \
+	 cd .. && pnpm paperclipai agent local-cli $(AGENT_REF) \
+	   --company-id $(COMPANY_ID) \
+	   --api-base http://localhost:13100 \
+	   --json; \
+	 EXIT=$$?; \
+	 pkill -f "ssh.*13100.*$(HOST)" 2>/dev/null; \
+	 exit $$EXIT
 
 # ─── Utilities ────────────────────────────────────────────────
 .PHONY: check update update-muninndb

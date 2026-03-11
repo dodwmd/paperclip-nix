@@ -67,6 +67,13 @@ in
           ${pkgs.coreutils}/bin/chown ${serviceUser}:${serviceGroup} ${runtimeEnvDir}/db-env
           ${pkgs.coreutils}/bin/chmod 0400 ${runtimeEnvDir}/db-env
         ''}"
+        "+${pkgs.writeShellScript "paperclip-github-env" ''
+          set -euo pipefail
+          GH_PAT=$(${pkgs.coreutils}/bin/tr -d '\n' < ${config.age.secrets.github-pat.path})
+          printf 'GITHUB_TOKEN=%s\n' "$GH_PAT" > ${runtimeEnvDir}/github-env
+          ${pkgs.coreutils}/bin/chown ${serviceUser}:${serviceGroup} ${runtimeEnvDir}/github-env
+          ${pkgs.coreutils}/bin/chmod 0400 ${runtimeEnvDir}/github-env
+        ''}"
         # Conditional pnpm install + build
         "${paperclipPrepare}/bin/paperclip-prepare ${paperclipDir}"
       ];
@@ -81,6 +88,7 @@ in
       # before the RuntimeDirectory is populated.
       EnvironmentFile = [
         "-${runtimeEnvDir}/db-env"
+        "-${runtimeEnvDir}/github-env"
         config.age.secrets.paperclip-env.path
       ];
 
