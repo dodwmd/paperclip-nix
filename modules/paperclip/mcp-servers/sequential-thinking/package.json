@@ -1,0 +1,8 @@
+{
+  "name": "sequential-thinking-mcp-wrapper",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/server-sequential-thinking": "2025.12.18"
+  }
+}

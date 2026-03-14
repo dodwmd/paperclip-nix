@@ -1,29 +1,25 @@
-{ config, pkgs, ... }:
+# Context7 MCP server — provides documentation context for AI agents.
+# Source: https://www.npmjs.com/package/@upstash/context7-mcp
+#
+# To update: bump version in context7/package.json, regenerate context7/package-lock.json,
+# then update npmDepsHash by running: prefetch-npm-deps context7/package-lock.json
+{ pkgs, ... }:
 
 let
-  hardening = import ../lib/hardening.nix;
+  shared = import ./_shared.nix;
+  hardening = import ../../lib/hardening.nix;
+  inherit (shared) serviceUser serviceGroup agentHome mcpRestartDelay;
 
-  # Context7 MCP server — provides documentation context for AI agents
-  # Pin version for reproducibility. Update by checking:
-  #   npm view @upstash/context7-mcp version
-  context7Version = "2.1.3";
+  version = "2.1.3";
 
-  serviceUser = "agent";
-  serviceGroup = "users";
-  agentHome = "/home/${serviceUser}";
-  mcpRestartDelay = "15s";
-
-  # Pre-built Context7 package (avoids runtime npx fetch)
-  context7Pkg = pkgs.buildNpmPackage {
+  pkg = pkgs.buildNpmPackage {
     pname = "context7-mcp";
-    version = context7Version;
+    inherit version;
 
-    src = ./context7-mcp;
-
+    src = ./context7;
     npmDepsHash = "sha256-oRxWUr6fdFLC+uMFNYTgypglV4JjTK2CcLVgnslYahk=";
     dontNpmBuild = true;
 
-    # The package doesn't need building, just installing deps
     installPhase = ''
       runHook preInstall
       mkdir -p $out/lib/node_modules/@upstash/context7-mcp
@@ -33,16 +29,17 @@ let
     '';
   };
 
-  context7Bin = pkgs.writeShellApplication {
+  bin = pkgs.writeShellApplication {
     name = "context7-mcp";
     runtimeInputs = [ pkgs.nodejs_22 ];
     text = ''
-      exec node ${context7Pkg}/lib/node_modules/@upstash/context7-mcp/dist/index.js "$@"
+      exec node ${pkg}/lib/node_modules/@upstash/context7-mcp/dist/index.js "$@"
     '';
   };
 in
 {
-  # Context7 MCP server (stdio mode, started on-demand by paperclip — not auto-started)
+  environment.systemPackages = [ bin ];
+
   systemd.services.paperclip-mcp-context7 = {
     description = "Context7 MCP Server for Paperclip";
     after = [ "network.target" ];
@@ -57,24 +54,19 @@ in
       User = serviceUser;
       Group = serviceGroup;
       WorkingDirectory = agentHome;
-      ExecStart = "${context7Bin}/bin/context7-mcp";
+      ExecStart = "${bin}/bin/context7-mcp";
       Restart = "on-failure";
       RestartSec = mcpRestartDelay;
-
-      # Home overlay — bind agent home for npm cache
       ProtectHome = "tmpfs";
       BindPaths = [ agentHome ];
       ReadWritePaths = [ agentHome ];
-
       ProtectProc = "invisible";
       ProcSubset = "pid";
     };
 
-    # Rate limit restarts — belongs in [Unit], not [Service]
     unitConfig = {
       StartLimitBurst = 3;
       StartLimitIntervalSec = 120;
     };
   };
-
 }

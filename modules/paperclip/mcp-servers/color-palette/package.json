@@ -1,0 +1,15 @@
+{
+  "name": "wcag-mcp-server",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.18.1",
+    "culori": "4.0.2",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/culori": "4.0.1"
+  }
+}

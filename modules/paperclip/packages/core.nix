@@ -22,5 +22,7 @@
     starship              # shell prompt
     zoxide                # smart cd
     claude-code           # Claude Code CLI — required for agent runs
+    gemini-cli            # Google Gemini CLI — required for gemini agent runs
+    codex                 # OpenAI Codex CLI — required for codex agent runs
   ];
 }

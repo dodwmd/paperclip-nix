@@ -1,0 +1,8 @@
+{
+  "name": "mermaid-mcp-wrapper",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@lepion/mcp-server-mermaid": "1.0.8"
+  }
+}
