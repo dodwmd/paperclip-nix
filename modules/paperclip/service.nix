@@ -10,6 +10,7 @@ let
   paperclipHome = "/home/${serviceUser}/.paperclip";
   claudeDir = "/home/${serviceUser}/.claude";
   claudeConfig = "/home/${serviceUser}/.claude.json";
+  agentWorkspaces = "/home/${serviceUser}/companys";
   paperclipHost = "127.0.0.1";
   paperclipPort = "3100";
   restartDelay = "10s";
@@ -97,14 +98,16 @@ in
       BindPaths = [
         paperclipDir
         paperclipHome
-        claudeDir     # claude session state, history, cache
-        claudeConfig  # claude main config + auth (~/.claude.json)
+        claudeDir        # claude session state, history, cache
+        claudeConfig     # claude main config + auth (~/.claude.json)
+        agentWorkspaces  # agent working directories under ~/companys
       ];
       ReadWritePaths = [
         paperclipDir
         paperclipHome
         claudeDir
         claudeConfig
+        agentWorkspaces
       ];
 
       # Additional sandboxing for Node.js process
