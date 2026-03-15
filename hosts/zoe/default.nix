@@ -33,6 +33,7 @@
     ../../modules/services/nginx.nix
     ../../modules/services/monitoring.nix
     ../../modules/services/muninndb.nix
+    ../../modules/services/ollama.nix
 
     ../../modules/paperclip/default.nix
     ../../modules/secrets.nix
