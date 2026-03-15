@@ -7,7 +7,7 @@ let
   # To update: find the new tag at https://github.com/scrypster/muninndb/releases,
   # then run: nix-prefetch-url --type sha256 <tarball-url>
   # and convert: nix hash convert --hash-algo sha256 --to sri <base32-hash>
-  version = "0.3.6-alpha";
+  version = "0.4.1-alpha";
 
   serviceUser = "agent";
   serviceGroup = "users";
@@ -22,7 +22,7 @@ let
 
     src = pkgs.fetchurl {
       url = "https://github.com/scrypster/muninndb/releases/download/v${version}/muninn_v${version}_linux_amd64.tar.gz";
-      hash = "sha256-G5QODM9ltzlnEta08agpx5erS0LB/I+wZ3XcQsuaAeA=";
+      hash = "sha256-VWhsGvWP1YuqsXopHj6HvH0j4Q0VZGaEGM35g36EwMw=";
     };
 
     # Tarball unpacks to a flat directory — binary is named "muninn"
