@@ -9,7 +9,10 @@ let
   remoteBackupDir = "${nfsMountPoint}/paperclip/db-backups";
   truenasHost = "192.168.1.6";
   nfsExport = "/mnt/tank/nfs";
-  remoteRetentionDays = 30;
+  # GFS retention for off-site (more generous than local)
+  remoteKeepDailyDays = 14;
+  remoteKeepWeeklyWeeks = 8;
+  remoteKeepMonthlyMonths = 12;
   nfsTimeoutDs = 30;        # deciseconds (timeo=30 -> 3s)
   nfsRetrans = 3;
   nfsIdleTimeoutSec = 60;
@@ -80,8 +83,69 @@ in
           "${localBackupDir}/" \
           "${remoteBackupDir}/"
 
-        # Prune remote backups older than ${toString remoteRetentionDays} days
-        ${pkgs.findutils}/bin/find "${remoteBackupDir}" -name "${dbCfg.name}-*.dump" -mtime +${toString remoteRetentionDays} -delete
+        # GFS rotation on remote backups
+        DATE=${pkgs.coreutils}/bin/date
+        FIND=${pkgs.findutils}/bin/find
+        STAT=${pkgs.coreutils}/bin/stat
+        SORT=${pkgs.coreutils}/bin/sort
+        AWK=${pkgs.gawk}/bin/awk
+        BASENAME=${pkgs.coreutils}/bin/basename
+        RM=${pkgs.coreutils}/bin/rm
+
+        NOW=$($DATE +%s)
+
+        mapfile -t ALL_REMOTE < <($FIND "${remoteBackupDir}" -maxdepth 1 -name "${dbCfg.name}-*.dump" -printf '%T@ %p\n' | $SORT -n | $AWK '{print $2}')
+
+        if [ ''${#ALL_REMOTE[@]} -gt 0 ]; then
+          declare -A KEEP
+
+          # Always keep the newest backup
+          KEEP["''${ALL_REMOTE[-1]}"]=1
+
+          # Daily tier
+          DAILY_CUTOFF=$((NOW - ${toString remoteKeepDailyDays} * 86400))
+          for f in "''${ALL_REMOTE[@]}"; do
+            MTIME=$($STAT --format='%Y' "$f")
+            if [ "$MTIME" -ge "$DAILY_CUTOFF" ]; then
+              KEEP["$f"]=1
+            fi
+          done
+
+          # Weekly tier
+          WEEKLY_CUTOFF=$((NOW - ${toString remoteKeepWeeklyWeeks} * 7 * 86400))
+          declare -A WEEK_BEST
+          for f in "''${ALL_REMOTE[@]}"; do
+            MTIME=$($STAT --format='%Y' "$f")
+            if [ "$MTIME" -ge "$WEEKLY_CUTOFF" ]; then
+              WEEK_KEY=$($DATE -d "@$MTIME" +%G-W%V)
+              WEEK_BEST["$WEEK_KEY"]="$f"
+            fi
+          done
+          for f in "''${WEEK_BEST[@]}"; do KEEP["$f"]=1; done
+
+          # Monthly tier
+          MONTHLY_CUTOFF=$((NOW - ${toString remoteKeepMonthlyMonths} * 31 * 86400))
+          declare -A MONTH_BEST
+          for f in "''${ALL_REMOTE[@]}"; do
+            MTIME=$($STAT --format='%Y' "$f")
+            if [ "$MTIME" -ge "$MONTHLY_CUTOFF" ]; then
+              MONTH_KEY=$($DATE -d "@$MTIME" +%Y-%m)
+              MONTH_BEST["$MONTH_KEY"]="$f"
+            fi
+          done
+          for f in "''${MONTH_BEST[@]}"; do KEEP["$f"]=1; done
+
+          # Delete backups not in KEEP set
+          DELETED=0
+          for f in "''${ALL_REMOTE[@]}"; do
+            if [ -z "''${KEEP[$f]+x}" ]; then
+              echo "Remote GFS rotating: $($BASENAME "$f")"
+              $RM -f "$f"
+              DELETED=$((DELETED + 1))
+            fi
+          done
+          echo "Remote GFS: kept ''${#KEEP[@]}, removed $DELETED"
+        fi
 
         echo "Off-site backup sync complete to ${remoteBackupDir}"
       '';
